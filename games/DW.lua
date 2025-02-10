@@ -160,8 +160,9 @@ createToggle(tabs.Main, {
     flag = "alwJump",
     default = false,
     callback = function(v)
-        local jumpHeight = Value and 7.3 or 0
-        Player.Humanoid.JumpHeight = jumpHeight
+        if Player then
+            Player.Humanoid.JumpHeight = v and 7.3 or 0
+        end
     end
 })
 
@@ -176,7 +177,15 @@ createSection(tabs.Main, "Miscellaneous")
 createToggle(tabs.Main, {
     name = "Loop Full Bright",
     flag = "loobFb",
-    default = false
+    default = false,
+    callback = function(v)
+        getgenv().loopFb = v
+        if Lighting then
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.Brightness = 1
+            Lighting.FogEnd = 1e10
+        end
+    end
 })
 
 
@@ -269,6 +278,32 @@ CurrentStamina.Changed:Connect(function(v)
     end
 end)
 -- end feature flag: alwaysRun
+
+-- feature flag: alwJump
+if getgenv().alwJump == true then
+    Player.Humanoid.JumpHeight = 7.3
+end
+-- end feature flag: alwJump
+
+-- feature flag: loobFb
+if getgenv().loobFb == true then
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+    Lighting.Brightness = 1;
+    Lighting.FogEnd = 1e10;
+    for _, v in pairs(lighting:GetDescendants()) do
+        if v:IsA("BloomEffect") or v:IsA("BlurEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("SunRaysEffect") then
+            v.Enabled = false;
+        end;
+    end;
+end
+Lighting.Changed:Connect(function()
+    if getgenv().loopFb then
+        lighting.Ambient = Color3.fromRGB(255, 255, 255);
+        lighting.Brightness = 1;
+        lighting.FogEnd = 1e10;
+    end
+end);
+-- end feature flag: loobFb
 
 -- listen to CurrentRoom
 CurrentRoom.ChildAdded:Connect(function(room)

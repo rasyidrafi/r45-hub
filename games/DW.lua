@@ -128,7 +128,19 @@ createSection(tabs.Main, "Character")
 createToggle(tabs.Main, {
     name = "Faster Run",
     flag = "fastRun",
-    default = false
+    default = false,
+    callback = function(v)
+        getgenv().fastRun = v
+        if Player then
+            if v then
+                Player.Humanoid.WalkSpeed = 30
+            else
+                game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
+                wait(0.1)
+                game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(false)
+            end
+        end
+    end
 })
 createToggle(tabs.Main, {
     name = "Always Run (Decrease Stamina)",
@@ -230,6 +242,12 @@ until (
     PlayerStats and
     CurrentRoom
 )
+
+-- feature flag: fastRun
+if getgenv().fastRun == true then
+    Player.Humanoid.WalkSpeed = 30
+end
+-- end feature flag: fastRun
 
 -- listen to CurrentRoom
 CurrentRoom.ChildAdded:Connect(function(room)

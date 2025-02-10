@@ -298,9 +298,9 @@ if getgenv().loobFb == true then
 end
 Lighting.Changed:Connect(function()
     if getgenv().loopFb then
-        lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        lighting.Brightness = 1;
-        lighting.FogEnd = 1e10;
+        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+        Lighting.Brightness = 1;
+        Lighting.FogEnd = 1e10;
     end
 end);
 -- end feature flag: loobFb

@@ -17,11 +17,16 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local function createWindow(title)
     return Rayfield:CreateWindow({
         Name = title,
+        Icon = 0,
         LoadingTitle = "R45 Private Hub",
         LoadingSubtitle = "by R45 Community",
-        ConfigurationSaving = {Enabled = true, FileName = "R45 Hub"},
-        Discord = {Enabled = false},
-        KeySystem = false
+        Theme = "Default",
+        DisableRayfieldPrompts = false,
+        DisableBuildWarnings = false,
+        ConfigurationSaving = {Enabled = true, FolderName = "R45", FileName = "config"},
+        Discord = {Enabled = false, Invite = "noinvitelink", RememberJoins = true},
+        KeySystem = false,
+        KeySettings = { Title = "Untitled", Subtitle = "Key System", Note = "No method of obtaining the key is provided", FileName = "Key", SaveKey = true, GrabKeyFromSite = false, Key = {"Hello"} }
     })
 end
 
@@ -46,25 +51,11 @@ local LocalPlayer
 local InGamePlayers
 local Player
 local PlayerStats
+local CurrentRoom
 
 -- global variables
 local TOLERANCE = 5
 local RANGE = 30
-
-repeat
-    Lighting = game:GetService("Lighting")
-    LocalPlayer = game:GetService("Players").LocalPlayer
-    InGamePlayers = game:GetService("Workspace").InGamePlayers
-    Player = InGamePlayers and InGamePlayers:FindFirstChild(LocalPlayer.Name)
-    PlayerStats = Player and Player:FindFirstChild("Stats")
-    wait()
-until (
-    Lighting and
-    LocalPlayer and
-    InGamePlayers and
-    Player and
-    PlayerStats
-)
 
 -- Game Feature's -------------------
 local Window = createWindow("Dandy's World")
@@ -78,14 +69,60 @@ local tabs = {
 
 -- Core UI --------------------------
 -- Main Tab
-local noClipFunction = function(value) end
+
+-- feature flag: noClip
+local classNames = { "Part", "MeshPart", "UnionOperation" }
+local modelNames = { "abcblock", "astrocutout", "bag", "baking tray", "baketray stack", "ball", "bearplush", "bench", "bill", "boltcutter", "boltcutters", "bones", "book", "bookshelf", "bookshelfmedium", "box", "bucket", "bulletinboard", "burger", "cactus", "carpet", "carpet_long", "ceilinglight", "chair", "cheese1", "cloud", "computer", "cookingpot", "couch", "counter", "crouchvine", "crate", "dandy wet sign", "dandycutout", "desk", "door", "egg carton", "electricpanel", "fafelle", "fence", "flour", "flower", "flower1", "flower2", "flowercactus", "forklift", "fossil_triceratops", "fridge", "gingerbread_human", "gingerbread_pine", "gingerbread_plate", "holidaypinetree", "hotdog", "informationboard", "industrialshelf", "invisborder", "invisibleborder", "invisiblewall", "inviswall", "jackinthebox", "jukebox", "ketchup", "ladder", "lantern", "largecrate", "locker_long", "lorebench", "loveseat", "menusign", "meshes/cashcabinet", "meshes/cashcabinet_001", "meshes/cashcabinet_002", "meshes/cashcabinet_003", "meshes/cashcabinet_004", "meshes/cashcabinet_005", "meshes/cashcabinet_006", "meshes/cashcabinet_007", "meshes/cashcabinet_008", "meshes/cashcabinet_009", "meshes/cashcabinet_010", "meshes/cube_329", "meshes/cube_330", "meshes/cube_331", "meshes/cylinder_062", "meshes/giftshop (1)", "meshes/giftshop_001 (1)", "meshes/giftshop_004 (1)", "meshes/giftshop_005 (1)", "meshes/giftshop_007 (1)", "meshes/giftshop_008 (1)", "meshes/giftshop_012 (1)", "meshes/giftshop_013 (1)", "meshes/giftshop_015 (1)", "meshes/giftshop_016 (1)", "meshes/pottedplant", "meshes/pottedplant_001", "meshes/pottedplant_002", "meshes/pottedplant_003", "meshes/pottedplant_004", "milkshake", "monitor", "mustard", "napkinholder", "new_fossil__stegosaurus", "new_fossil_dinoskull", "new_fossil_roundshell", "newregister", "newspaper", "noclip", "noodles", "officechair", "ornithomimus", "oven", "paintings", "paperplate", "pillow", "plushie", "pot", "pottedplant", "present", "pretzel", "projector", "puzzlebox", "rack", "radio", "retopovan", "rolled newspaper", "rose", "shelf", "shelly wet sign", "shrub", "sink", "skillet", "smallcrate", "smalltable", "soda", "split soda", "speaker", "spraycan", "stand", "stocking", "stopsign", "table", "tableandchairs", "toolbox", "toppled flower", "trafficcone", "tree", "utahraptor", "vase", "vee wet sign", "vendingmachine", "watercooler" }
+
+local function handleNoClipSure(parent, value)
+    for _, v in pairs(parent:GetChildren()) do
+        if v.ClassName == "Model" then
+            handleNoClipSure(v, value)
+        elseif table.find(classNames, v.ClassName) then
+            v.CanCollide = value
+        end
+    end
+end
+
+local function handleNoClipUniversal(parent, value)
+    if table.find(classNames, parent.ClassName) then
+        if table.find(modelNames, parent.Name:lower()) then
+            parent.CanCollide = value
+        end
+    end
+
+    if parent.ClassName == "Model" then
+        if table.find(modelNames, parent.Name:lower()) then
+            handleNoClipSure(parent, value)
+        else
+            for _, pChild in pairs(parent:GetChildren()) do
+                handleNoClipUniversal(pChild, value)
+            end
+        end
+    end
+
+    if parent.ClassName == "Folder" then
+        for _, pChild in pairs(parent:GetChildren()) do
+            handleNoClipUniversal(pChild, value)
+        end
+    end
+end
+
 createSection(tabs.Main, "No Clip")
 createToggle(tabs.Main, {
     name = "No Clip",
     flag = "noClip",
     default = false,
-    callback = noClipFunction
+    callback = function(v)
+        getgenv().noClip = v
+        if CurrentRoom then
+            for _, room in pairs(CurrentRoom:GetChildren()) do
+                handleNoClipUniversal(room, not v)
+            end
+        end
+    end
 })
+-- end feature flag: noClip
 
 createSection(tabs.Main, "Character")
 createToggle(tabs.Main, {
@@ -176,57 +213,33 @@ createToggle(tabs.Machines, {
 })
 
 -- Core Functions -------------------
--- feature flag: noClip
-local function handleNoClipSure(parent, value)
-    local classNames = { "Part", "MeshPart", "UnionOperation" }
-    for _, v in pairs(parent:GetDescendants()) do
-        if v.ClassName == "Model" then
-            handleNoClipSure(v, value)
-        elseif table.find(classNames, v.ClassName) then
-            v.CanCollide = value
-        end
-    end
-end
+-- wait until all variables are initialized
+repeat
+    Lighting = game:GetService("Lighting")
+    LocalPlayer = game:GetService("Players").LocalPlayer
+    InGamePlayers = game:GetService("Workspace").InGamePlayers
+    Player = InGamePlayers and InGamePlayers:FindFirstChild(LocalPlayer.Name)
+    PlayerStats = Player and Player:FindFirstChild("Stats")
+    CurrentRoom = game:GetService("Workspace").CurrentRoom
+    wait()
+until (
+    Lighting and
+    LocalPlayer and
+    InGamePlayers and
+    Player and
+    PlayerStats and
+    CurrentRoom
+)
 
-local function handleNoClip(parent, value)
-    local classNames = { "Part", "MeshPart", "UnionOperation" }
-    local modelNames = { "abcblock", "astrocutout", "bag", "baking tray", "baketray stack", "ball", "bearplush", "bench", "bill", "boltcutter", "boltcutters", "bones", "book", "bookshelf", "bookshelfmedium", "box", "bucket", "bulletinboard", "burger", "cactus", "carpet", "carpet_long", "ceilinglight", "chair", "cheese1", "cloud", "computer", "cookingpot", "couch", "counter", "crouchvine", "crate", "dandy wet sign", "dandycutout", "desk", "door", "egg carton", "electricpanel", "fafelle", "fence", "flour", "flower", "flower1", "flower2", "flowercactus", "forklift", "fossil_triceratops", "fridge", "gingerbread_human", "gingerbread_pine", "gingerbread_plate", "holidaypinetree", "hotdog", "informationboard", "industrialshelf", "invisborder", "invisibleborder", "invisiblewall", "inviswall", "jackinthebox", "jukebox", "ketchup", "ladder", "lantern", "largecrate", "locker_long", "lorebench", "loveseat", "menusign", "meshes/cashcabinet", "meshes/cashcabinet_001", "meshes/cashcabinet_002", "meshes/cashcabinet_003", "meshes/cashcabinet_004", "meshes/cashcabinet_005", "meshes/cashcabinet_006", "meshes/cashcabinet_007", "meshes/cashcabinet_008", "meshes/cashcabinet_009", "meshes/cashcabinet_010", "meshes/cube_329", "meshes/cube_330", "meshes/cube_331", "meshes/cylinder_062", "meshes/giftshop (1)", "meshes/giftshop_001 (1)", "meshes/giftshop_004 (1)", "meshes/giftshop_005 (1)", "meshes/giftshop_007 (1)", "meshes/giftshop_008 (1)", "meshes/giftshop_012 (1)", "meshes/giftshop_013 (1)", "meshes/giftshop_015 (1)", "meshes/giftshop_016 (1)", "meshes/pottedplant", "meshes/pottedplant_001", "meshes/pottedplant_002", "meshes/pottedplant_003", "meshes/pottedplant_004", "milkshake", "monitor", "mustard", "napkinholder", "new_fossil__stegosaurus", "new_fossil_dinoskull", "new_fossil_roundshell", "newregister", "newspaper", "noclip", "noodles", "officechair", "ornithomimus", "oven", "paintings", "paperplate", "pillow", "plushie", "pot", "pottedplant", "present", "pretzel", "projector", "puzzlebox", "rack", "radio", "retopovan", "rolled newspaper", "rose", "shelf", "shelly wet sign", "shrub", "sink", "skillet", "smallcrate", "smalltable", "soda", "split soda", "speaker", "spraycan", "stand", "stocking", "stopsign", "table", "tableandchairs", "toolbox", "toppled flower", "trafficcone", "tree", "utahraptor", "vase", "vee wet sign", "vendingmachine", "watercooler" }
-
-    for _, v in pairs(parent:GetDescendants()) do
-        local nameLower = v.Name:lower()
-        if v.ClassName == "Model" then
-            if table.find(modelNames, nameLower) then
-                handleNoClipSure(v, value)
-            else
-                handleNoClip(v, value)
-            end
-        elseif table.find(classNames, v.ClassName) and table.find(modelNames, nameLower) then
-            v.CanCollide = value
-        end
-    end
-end
-
-local function handleNoClipAll(room, value)
-    local childNames = {"Borders", "Walls", "FreeArea", "Objects", "GeneratedBorders"}
-    
-    for _, name in ipairs(childNames) do
-        local child = room:FindFirstChild(name)
-        if child then
-            handleNoClip(child, value)
-        end
-    end
-end
-noClipFunction = function(value)
-    handleNoClipAll(CurrentRoom, not value)
-end
--- end feature flag: noClip
-
-local CurrentRoom = game.Workspace:WaitForChild("CurrentRoom")
+-- listen to CurrentRoom
 CurrentRoom.ChildAdded:Connect(function(room)
-    if not room:IsA("Model") then return end
+    print("New room detected:", room.Name)
 
-    -- feature flag: noClip
-    if getgenv().noClip then
-        handleNoClipAll(room, false)
-    end
+    room.DescendantAdded:Connect(function(descendant)
+        -- feature flag: noClip
+        if getgenv().noClip == true then
+            handleNoClipUniversal(descendant, false)
+        end
+        -- end feature flag: noClip
+    end)
 end)

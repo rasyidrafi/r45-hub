@@ -8,7 +8,7 @@ local GAME_CONFIG = {
     ["16552821455"] = {Title = "Dandy's World", Code = "DW"}
 }
 
--- Core Functions -------------
+-- Utility Functions ------------
 local function Notify(Text)
 	game:GetService("StarterGui"):SetCore("SendNotification", {
 		Title = "R45 Hub Notification",
@@ -29,7 +29,7 @@ local function validateGame()
     return gameData
 end
 
--- Main Execution Flow ---------
+-- Game Handler ----------------
 local gameData = validateGame()
 if not gameData then return end
-(loadstring or load)(game:HttpGet(BASE_URL .. gameData.Code .. ".lua"))()
+loadstring(game:HttpGet(BASE_URL .. gameData.Code .. ".lua"))()

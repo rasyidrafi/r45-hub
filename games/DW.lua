@@ -52,6 +52,7 @@ local InGamePlayers
 local Player
 local PlayerStats
 local CurrentRoom
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 -- global variables
 local TOLERANCE = 5
@@ -71,6 +72,7 @@ local tabs = {
 -- Main Tab
 
 -- feature flag: noClip
+local folderName = { "Walls", "Borders", "FreeArea", "Objects", "GeneratedBorders" }
 local classNames = { "Part", "MeshPart", "UnionOperation" }
 local modelNames = { "abcblock", "astrocutout", "bag", "baking tray", "baketray stack", "ball", "bearplush", "bench", "bill", "boltcutter", "boltcutters", "bones", "book", "bookshelf", "bookshelfmedium", "box", "bucket", "bulletinboard", "burger", "cactus", "carpet", "carpet_long", "ceilinglight", "chair", "cheese1", "cloud", "computer", "cookingpot", "couch", "counter", "crouchvine", "crate", "dandy wet sign", "dandycutout", "desk", "door", "egg carton", "electricpanel", "fafelle", "fence", "flour", "flower", "flower1", "flower2", "flowercactus", "forklift", "fossil_triceratops", "fridge", "gingerbread_human", "gingerbread_pine", "gingerbread_plate", "holidaypinetree", "hotdog", "informationboard", "industrialshelf", "invisborder", "invisibleborder", "invisiblewall", "inviswall", "jackinthebox", "jukebox", "ketchup", "ladder", "lantern", "largecrate", "locker_long", "lorebench", "loveseat", "menusign", "meshes/cashcabinet", "meshes/cashcabinet_001", "meshes/cashcabinet_002", "meshes/cashcabinet_003", "meshes/cashcabinet_004", "meshes/cashcabinet_005", "meshes/cashcabinet_006", "meshes/cashcabinet_007", "meshes/cashcabinet_008", "meshes/cashcabinet_009", "meshes/cashcabinet_010", "meshes/cube_329", "meshes/cube_330", "meshes/cube_331", "meshes/cylinder_062", "meshes/giftshop (1)", "meshes/giftshop_001 (1)", "meshes/giftshop_004 (1)", "meshes/giftshop_005 (1)", "meshes/giftshop_007 (1)", "meshes/giftshop_008 (1)", "meshes/giftshop_012 (1)", "meshes/giftshop_013 (1)", "meshes/giftshop_015 (1)", "meshes/giftshop_016 (1)", "meshes/pottedplant", "meshes/pottedplant_001", "meshes/pottedplant_002", "meshes/pottedplant_003", "meshes/pottedplant_004", "milkshake", "monitor", "mustard", "napkinholder", "new_fossil__stegosaurus", "new_fossil_dinoskull", "new_fossil_roundshell", "newregister", "newspaper", "noclip", "noodles", "officechair", "ornithomimus", "oven", "paintings", "paperplate", "pillow", "plushie", "pot", "pottedplant", "present", "pretzel", "projector", "puzzlebox", "rack", "radio", "retopovan", "rolled newspaper", "rose", "shelf", "shelly wet sign", "shrub", "sink", "skillet", "smallcrate", "smalltable", "soda", "split soda", "speaker", "spraycan", "stand", "stocking", "stopsign", "table", "tableandchairs", "toolbox", "toppled flower", "trafficcone", "tree", "utahraptor", "vase", "vee wet sign", "vendingmachine", "watercooler" }
 
@@ -101,7 +103,7 @@ local function handleNoClipUniversal(parent, value)
         end
     end
 
-    if parent.ClassName == "Folder" then
+    if parent.ClassName == "Folder" and table.find(folderName, parent.Name) then
         for _, pChild in pairs(parent:GetChildren()) do
             handleNoClipUniversal(pChild, value)
         end
@@ -145,7 +147,13 @@ createToggle(tabs.Main, {
 createToggle(tabs.Main, {
     name = "Always Run (Decrease Stamina)",
     flag = "alwaysRun",
-    default = false
+    default = false,
+    callback = function(v)
+        getgenv().alwaysRun = v
+        if Player then
+            game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(v)
+        end
+    end
 })
 createToggle(tabs.Main, {
     name = "Allow Jump",
@@ -248,6 +256,19 @@ if getgenv().fastRun == true then
     Player.Humanoid.WalkSpeed = 30
 end
 -- end feature flag: fastRun
+
+-- feature flag: alwaysRun
+if getgenv().alwaysRun == true then
+    game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
+end
+local Sprinting = PlayerStats:FindFirstChild("Sprinting")
+local CurrentStamina = PlayerStats:FindFirstChild("CurrentStamina")
+CurrentStamina.Changed:Connect(function(v)
+    if getgenv().alwaysRun == true and Sprinting.Value == false and v > 14 then
+        game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
+    end
+end)
+-- end feature flag: alwaysRun
 
 -- listen to CurrentRoom
 CurrentRoom.ChildAdded:Connect(function(room)

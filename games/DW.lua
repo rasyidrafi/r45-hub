@@ -43,6 +43,27 @@ local function createToggle(tab, config)
         Callback = callback
     })
 end
+
+local function createDropdown(tab, config)
+    return tab:CreateDropdown({
+        Name = config.name,
+        Options = config.options,
+        CurrentOption = config.currentOption,
+        MultipleOptions = config.multipleOptions,
+        Flag = config.flag,
+        Callback = config.callback
+    })
+end
+
+local function createKeybind(tab, config)
+    return tab:CreateKeybind({
+        Name = config.name,
+        CurrentKeybind = config.default,
+        HoldToInteract = config.holdToInteract,
+        Flag = config.flag,
+        Callback = config.callback
+    })
+end
 -- End Get From Template ---------
 
 -- Initialize Variables ----------
@@ -169,9 +190,19 @@ createToggle(tabs.Main, {
 
 createSection(tabs.Main, "Distraction")
 createToggle(tabs.Main, {
-    name = "Distract Monster",
+    name = "Distract Monster (Didnt Work on Long Range Monsters)",
     flag = "distractMonster",
     default = false
+})
+local monsterDropdown = createDropdown(tabs.Main, {
+    name = "Select Monster",
+    options = { "None" },
+    currentOption = { "None" },
+    multipleOptions = false,
+    flag = "selectedMonster",
+    callback = function(v)
+        getgenv().selectedMonster = v[1]
+    end
 })
 
 createSection(tabs.Main, "Miscellaneous")
@@ -496,16 +527,50 @@ Lighting.Changed:Connect(function()
 end);
 -- end feature flag: loobFb
 
--- feature flag: loopTpEle and autoTpEle
+local healthItemList = { "HealthKit", "Bandage" }
 RunService.Heartbeat:Connect(function()
-    if not SingleElevator or not SpawnZones then return end
-    if getgenv().loopTpEle == true or (Panic.Value == true and getgenv().autoTpEle == true) then
-        DoTeleport(SpawnZones)
+    -- feature flag: distractMonster
+    if getgenv().distractMonster == true and getgenv().selectedMonster ~= "None" then
+        local monsterName = getgenv().selectedMonster
+        monsterName = monsterName:gsub("Twisted ", "")
+        monsterName = monsterName .. "Monster"
+
+        for _, room in pairs(CurrentRoom:GetChildren()) do
+            local monsters = room:FindFirstChild("Monsters")
+            if monsters then
+                local monster = monsters:FindFirstChild(monsterName)
+                if monster then
+                    local monsterHumanoidRootPart = monster:FindFirstChild("HumanoidRootPart")
+                    HumanoidRootPart.CFrame = monsterHumanoidRootPart.CFrame * CFrame.new(0, 6.5, 0)
+                    HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+                end
+            end
+        end
+        -- end feature flag: distractMonster
+    else
+        -- feature flag: loopTpEle and autoTpEle
+        if SingleElevator and SpawnZones then
+            if getgenv().loopTpEle == true or (Panic.Value == true and getgenv().autoTpEle == true) then
+                DoTeleport(SpawnZones)
+            end
+        end
+        -- end feature flag: loopTpEle and autoTpEle
     end
+
+    -- feature flag: autoUseItems
+    if getgenv().autoUseItems then
+        for _, slot in pairs(Inventory:GetChildren()) do
+            local itemName = slot.Value
+            if not table.find(healthItemList, itemName) then
+                game:GetService("ReplicatedStorage").Events.ItemEvent:InvokeServer(Player, slot)
+            end
+        end
+    end
+    -- end feature flag: autoUseItems
 end)
--- end feature flag: loopTpEle and autoTpEle
 
 -- listen to CurrentRoom
+local ignoreMonsters = { "RazzleDazzleMonster", "ConnieMonster", "RodgerMonster" }
 CurrentRoom.ChildAdded:Connect(function(room)
     print("New room detected:", room.Name)
 
@@ -525,7 +590,7 @@ CurrentRoom.ChildAdded:Connect(function(room)
     end)
 
     -- feature flag: esp
-    local generators = room:FindFirstChild("Generators")
+    local generators = room:WaitForChild("Generators")
     generators.ChildAdded:Connect(function(generator)
         local stats = generator:FindFirstChild("Stats")
         local completed = stats and stats:FindFirstChild("Completed")
@@ -542,7 +607,29 @@ CurrentRoom.ChildAdded:Connect(function(room)
         end)
     end)
     -- end feature flag: esp
+
+    -- feature flag: distractMonster
+    local monsters = room:WaitForChild("Monsters")
+    local monsterList = { "None" }
+    monsters.ChildAdded:Connect(function(monster)
+        local monsterName = monster.Name
+        if table.find(ignoreMonsters, monsterName) then return end
+        monsterName = monsterName:gsub("Monster", "")
+        monsterName = "Twisted " .. monsterName
+        table.insert(monsterList, monsterName)
+        print("Monster added:", monsterName)
+        print("Current Monster List:", table.concat(monsterList, ", "))
+        monsterDropdown:Refresh(monsterList)
+    end)
+    -- end feature flag: distractMonster
 end)
+
+-- feature flag: distractMonster
+CurrentRoom.ChildRemoved:Connect(function()
+    monsterDropdown:Set({"None"})
+    monsterDropdown:Refresh({"None"})
+end)
+-- end feature flag: distractMonster
 
 -- feature flag: esp
 InGamePlayers.DescendantAdded:Connect(function()
@@ -577,28 +664,6 @@ Player.Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(function()
     end
 end)
 -- end feature flag: itemsAura
-
--- feature flag: autoUseItems
-local healthItemList = { "HealthKit", "Bandage" }
-local tripeUseItemList = { "Gumball" }
-for _, slot in pairs(Inventory:GetChildren()) do
-    local itemName = slot.Name
-    slot.Changed:Connect(function(v)
-        if not getgenv().autoUseItems then return end
-        if table.find(healthItemList, v) then return end
-        local execute = 1
-        if table.find(tripeUseItemList, v) then
-            execute = 3
-        end
-
-        for _ = 1, execute do
-            print("Executing number:", _)
-            game:GetService("ReplicatedStorage").Events.ItemEvent:InvokeServer(Player, slot)
-            task.wait(1)
-        end
-    end)
-end
--- end feature flag: autoUseItems
 
 -- feature flag: autoSkillCheck
 local Menu = ScreenGui:FindFirstChild("Menu")

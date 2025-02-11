@@ -203,13 +203,171 @@ createToggle(tabs.Elevator, {
 })
 
 -- ESP Tab
+-- feature flag: esp
+local rareItemList = {
+    "Instructions", "JumperCable",
+    "AirHorn", "Bandage", "PopBottle", "HealthKit", "EjectButton", "BoxOfChocolates", "SmokeBomb", "Valve" 
+}
+
+local function handleEsp(key, value)
+    local flagKey = "esp" .. key
+    local flagKeyLabel = flagKey .. "Label"
+    if key == "Player" and InGamePlayers and LocalPlayer then
+        for _, player in pairs(InGamePlayers:GetChildren()) do
+            if player.Name ~= LocalPlayer.Name then
+                if value then
+                    if not player:FindFirstChild(flagKey) then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = flagKey
+                        highlight.Parent = player
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        highlight.OutlineColor = Color3.fromRGB(0, 0, 0)
+                        highlight.OutlineTransparency = 0
+                        highlight.FillTransparency = 0.2
+                        highlight.FillColor = Color3.fromRGB(85, 170, 255)
+                    end
+
+                    if not player:FindFirstChild(flagKeyLabel) then
+                        local billboard = Instance.new("BillboardGui")
+                        billboard.Name = flagKeyLabel
+                        billboard.Parent = player
+                        billboard.Size = UDim2.new(0, 100, 0, 50)
+                        billboard.StudsOffset = Vector3.new(0, 4.5, 0)
+                        billboard.AlwaysOnTop = true
+
+                        local textLabel = Instance.new("TextLabel")
+                        textLabel.Parent = billboard
+                        textLabel.Text = player.Name
+                        textLabel.TextColor3 = Color3.fromRGB(85, 170, 255)
+                        textLabel.Size = UDim2.new(1, 0, 1, 0)
+                        textLabel.BackgroundTransparency = 1
+                        textLabel.TextScaled = false
+                        textLabel.TextSize = 12.5
+                        textLabel.Font = Enum.Font.FredokaOne
+
+                        local uiStroke = Instance.new("UIStroke")
+                        uiStroke.Thickness = 1.5
+                        uiStroke.Color = Color3.fromRGB(0, 0, 0)
+                        uiStroke.Parent = textLabel
+                    end
+                else
+                    if player:FindFirstChild(flagKey) then
+                        player[flagKey]:Destroy()
+                    end
+
+                    if player:FindFirstChild(flagKeyLabel) then
+                        player[flagKeyLabel]:Destroy()
+                    end
+                end
+            end
+        end
+    elseif CurrentRoom then
+        for _, room in pairs(CurrentRoom:GetChildren()) do
+            local targets = room:FindFirstChild(key)
+            if targets then
+                for i, target in pairs(targets:GetChildren()) do
+                    local targetName = target.Name
+                    
+                    local outerColor = Color3.fromRGB(0, 0, 0)
+                    local innerColor = Color3.fromRGB(255, 0, 0)
+
+                    if key == "Items" then
+                        outerColor = Color3.fromRGB(255, 255, 255)
+                        innerColor = Color3.fromRGB(32, 32, 32)
+
+                        if table.find(rareItemList, targetName) then
+                            outerColor = Color3.fromRGB(245, 255, 68)
+                            innerColor = Color3.fromRGB(155, 132, 12)
+                        end
+
+                        if targetName == "FakeCapsule" then
+                            outerColor = Color3.fromRGB(0, 0, 0)
+                            innerColor = Color3.fromRGB(255, 0, 0)
+                        end
+                    end
+
+                    if key == "Generators" then
+                        innerColor = Color3.fromRGB(0, 255, 0)
+
+                        local stats = target:FindFirstChild("Stats")
+                        local completed = stats and stats:FindFirstChild("Completed")
+                        local activePlayer  = stats and stats:FindFirstChild("ActivePlayer")
+                        targetName = "Machine " .. i
+
+                        if activePlayer and activePlayer.Value then
+                            targetName = targetName .. "\n(Filling...)"
+                        end
+
+                        if completed and completed.Value == true then
+                            targetName = targetName .. "\n(Completed)"
+                        end
+                    end
+
+                    if value then
+                        if not target:FindFirstChild(flagKey) then
+                            local highlight = Instance.new("Highlight")
+                            highlight.Name = flagKey
+                            highlight.Parent = target
+                            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                            highlight.OutlineColor = outerColor
+                            highlight.OutlineTransparency = 0
+                            highlight.FillTransparency = 0.2
+                            highlight.FillColor = innerColor
+                        end
+
+                        if not target:FindFirstChild(flagKeyLabel) then
+                            local billboard = Instance.new("BillboardGui")
+                            billboard.Name = flagKeyLabel
+                            billboard.Parent = target
+                            billboard.Size = UDim2.new(0, 100, 0, 50)
+                            billboard.StudsOffset = Vector3.new(0, 4.5, 0)
+                            if key == "Items" then
+                                billboard.StudsOffset = Vector3.new(0, 3, 0)
+                            elseif key == "Generators" then
+                                billboard.StudsOffset = Vector3.new(0, -9.2, 0)
+                            end
+                            billboard.AlwaysOnTop = true
+
+                            local textLabel = Instance.new("TextLabel")
+                            textLabel.Parent = billboard
+                            textLabel.Text = targetName
+                            textLabel.TextColor3 = innerColor
+                            textLabel.Size = UDim2.new(1, 0, 1, 0)
+                            textLabel.BackgroundTransparency = 1
+                            textLabel.TextScaled = false
+                            textLabel.TextSize = 12.5
+                            textLabel.Font = Enum.Font.FredokaOne
+
+                            local uiStroke = Instance.new("UIStroke")
+                            uiStroke.Thickness = 1.5
+                            uiStroke.Color = outerColor
+                            uiStroke.Parent = textLabel
+                        elseif target:FindFirstChild(flagKeyLabel) then
+                            target[flagKeyLabel].TextLabel.Text = targetName
+                        end
+                    else
+                        if target:FindFirstChild(flagKey) then
+                            target[flagKey]:Destroy()
+                        end
+
+                        if target:FindFirstChild(flagKeyLabel) then
+                            target[flagKeyLabel]:Destroy()
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+-- end feature flag: esp
+
 createSection(tabs.ESP, "ESP Options")
 local espConfig = {
-    Monster = {flag = "espMonster", default = false},
-    Generator = {flag = "espGenerator", default = false},
+    Monsters = {flag = "espMonster", default = false},
+    Generators = {flag = "espGenerator", default = false},
     Player = {flag = "espPlayer", default = false},
-    Item = {flag = "espItem", default = false},
-    Elevator = {flag = "espElevator", default = false},
+    Items = {flag = "espItem", default = false},
+    Elevators = {flag = "espElevator", default = false},
 }
 
 for name, config in pairs(espConfig) do
@@ -217,6 +375,10 @@ for name, config in pairs(espConfig) do
         name = "Esp "..name,
         flag = config.flag,
         default = config.default,
+        callback = function(v)
+            getgenv()[config.flag] = v
+            handleEsp(name, v)
+        end
     })
 end
 
@@ -327,8 +489,14 @@ end);
 -- feature flag: loopTpEle and autoTpEle
 local autoTp = Panic.Value == true and getgenv().autoTpEle == true
 local trigger = autoTp or getgenv().loopTpEle == true
-while trigger and SingleElevator and SpawnZones do
-    DoTeleport(SpawnZones)
+while trigger do
+    print("Trigger is True")
+    print("SingleElevator:", SingleElevator)
+    print("SpawnZones:", SpawnZones)
+    print("\n")
+    if SingleElevator and SpawnZones then
+        DoTeleport(SpawnZones)
+    end
     wait(0.01)
 end
 -- end feature flag: loopTpEle and autoTpEle
@@ -343,5 +511,40 @@ CurrentRoom.ChildAdded:Connect(function(room)
             handleNoClipUniversal(descendant, false)
         end
         -- end feature flag: noClip
+        -- feature flag: esp
+        for name, config in pairs(espConfig) do
+            if getgenv()[config.flag] == true then
+                handleEsp(name, getgenv()[config.flag])
+            end
+        end
+        -- end feature flag: esp
     end)
+
+    -- feature flag: esp
+    local generators = room:FindFirstChild("Generators")
+    generators.ChildAdded:Connect(function(generator)
+        local stats = generator:FindFirstChild("Stats")
+        local completed = stats and stats:FindFirstChild("Completed")
+        local activePlayer  = stats and stats:FindFirstChild("ActivePlayer")
+
+        completed.Changed:Connect(function()
+            if getgenv().espGenerator == true then
+                handleEsp("Generators", getgenv().espGenerator)
+            end
+        end)
+
+        activePlayer.Changed:Connect(function()
+            if getgenv().espGenerator == true then
+                handleEsp("Generators", getgenv().espGenerator)
+            end
+        end)
+    end)
+    -- end feature flag: esp
 end)
+
+InGamePlayers.DescendantAdded:Connect(function()
+    if getgenv().espPlayer == true then
+        handleEsp("Player", getgenv().espPlayer)
+    end
+end)
+-- end feature flag: esp

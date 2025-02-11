@@ -53,6 +53,7 @@ local Player
 local PlayerStats
 local CurrentRoom
 local Elevators
+local RunService = game:GetService("RunService")
 
 -- global variables
 local TOLERANCE = 5
@@ -134,7 +135,7 @@ createToggle(tabs.Main, {
     callback = function(v)
         getgenv().fastRun = v
         if Player then
-            if v then
+            if v and Player.Humanoid.WalkSpeed < 30 then
                 Player.Humanoid.WalkSpeed = 30
             else
                 game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
@@ -425,6 +426,10 @@ until (
 )
 
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Inventory = Character:WaitForChild("Inventory")
+local HumanoidRootPart = Player:WaitForChild("HumanoidRootPart")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local ScreenGui = PlayerGui:WaitForChild("ScreenGui")
 local SingleElevator = Elevators:WaitForChild("Elevator")
 local SpawnZones = SingleElevator:WaitForChild("SpawnZones")
 local Panic = game:GetService("Workspace").Info.Panic
@@ -442,9 +447,14 @@ local function DoTeleport(target)
 end
 
 -- feature flag: fastRun
-if getgenv().fastRun == true then
+if getgenv().fastRun == true and Player.Humanoid.WalkSpeed < 30 then
     Player.Humanoid.WalkSpeed = 30
 end
+Player.Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+    if getgenv().fastRun == true and Player.Humanoid.WalkSpeed < 30 then
+        Player.Humanoid.WalkSpeed = 30
+    end
+end)
 -- end feature flag: fastRun
 
 -- feature flag: alwaysRun
@@ -454,9 +464,10 @@ end
 local Sprinting = PlayerStats:FindFirstChild("Sprinting")
 local CurrentStamina = PlayerStats:FindFirstChild("CurrentStamina")
 CurrentStamina.Changed:Connect(function(v)
-    if getgenv().alwaysRun == true and Sprinting.Value == false and v > 14 then
-        game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
-    end
+    if not getgenv().alwaysRun then return end
+    if Sprinting.Value == true then return end
+    if v < 14 then return end
+    game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
 end)
 -- end feature flag: alwaysRun
 
@@ -478,27 +489,20 @@ if getgenv().loobFb == true then
     end;
 end
 Lighting.Changed:Connect(function()
-    if getgenv().loopFb then
-        Lighting.Ambient = Color3.fromRGB(255, 255, 255);
-        Lighting.Brightness = 1;
-        Lighting.FogEnd = 1e10;
-    end
+    if not getgenv().loobFb then return end
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255);
+    Lighting.Brightness = 1;
+    Lighting.FogEnd = 1e10;
 end);
 -- end feature flag: loobFb
 
 -- feature flag: loopTpEle and autoTpEle
-local autoTp = Panic.Value == true and getgenv().autoTpEle == true
-local trigger = autoTp or getgenv().loopTpEle == true
-while trigger do
-    print("Trigger is True")
-    print("SingleElevator:", SingleElevator)
-    print("SpawnZones:", SpawnZones)
-    print("\n")
-    if SingleElevator and SpawnZones then
+RunService.Heartbeat:Connect(function()
+    if not SingleElevator or not SpawnZones then return end
+    if getgenv().loopTpEle == true or (Panic.Value == true and getgenv().autoTpEle == true) then
         DoTeleport(SpawnZones)
     end
-    wait(0.01)
-end
+end)
 -- end feature flag: loopTpEle and autoTpEle
 
 -- listen to CurrentRoom
@@ -528,23 +532,95 @@ CurrentRoom.ChildAdded:Connect(function(room)
         local activePlayer  = stats and stats:FindFirstChild("ActivePlayer")
 
         completed.Changed:Connect(function()
-            if getgenv().espGenerator == true then
-                handleEsp("Generators", getgenv().espGenerator)
-            end
+            if not getgenv().espGenerator then return end
+            handleEsp("Generators", getgenv().espGenerator)
         end)
 
         activePlayer.Changed:Connect(function()
-            if getgenv().espGenerator == true then
-                handleEsp("Generators", getgenv().espGenerator)
-            end
+            if not getgenv().espGenerator then return end
+            handleEsp("Generators", getgenv().espGenerator)
         end)
     end)
     -- end feature flag: esp
 end)
 
+-- feature flag: esp
 InGamePlayers.DescendantAdded:Connect(function()
     if getgenv().espPlayer == true then
         handleEsp("Player", getgenv().espPlayer)
     end
 end)
 -- end feature flag: esp
+
+-- feature flag: itemsAura
+Player.Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(function()
+    if getgenv().itemsAura == true then
+        for _, room in pairs(CurrentRoom:GetChildren()) do
+            local Items = room:FindFirstChild("Items")
+            for _, item in pairs(Items:GetChildren()) do
+                local Prompt = item:FindFirstChild("Prompt")
+                if Prompt then
+                    local ProximityPrompt = Prompt:FindFirstChild("ProximityPrompt")
+                    if ProximityPrompt and ProximityPrompt.Enabled then
+                        local distance = (Prompt.Position - HumanoidRootPart.Position).Magnitude
+                        if distance <= RANGE then
+                            ProximityPrompt:InputHoldBegin()
+                            if ProximityPrompt.HoldDuration > 0 then
+                                wait(ProximityPrompt.HoldDuration)
+                            end
+                            ProximityPrompt:InputHoldEnd()
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+-- end feature flag: itemsAura
+
+-- feature flag: autoUseItems
+local healthItemList = { "HealthKit", "Bandage" }
+local tripeUseItemList = { "Gumball" }
+for _, slot in pairs(Inventory:GetChildren()) do
+    local itemName = slot.Name
+    slot.Changed:Connect(function(v)
+        if not getgenv().autoUseItems then return end
+        if table.find(healthItemList, v) then return end
+        local execute = 1
+        if table.find(tripeUseItemList, v) then
+            execute = 3
+        end
+
+        for _ = 1, execute do
+            print("Executing number:", _)
+            game:GetService("ReplicatedStorage").Events.ItemEvent:InvokeServer(Player, slot)
+            task.wait(1)
+        end
+    end)
+end
+-- end feature flag: autoUseItems
+
+-- feature flag: autoSkillCheck
+local Menu = ScreenGui:FindFirstChild("Menu")
+local SkillCheckFrame = Menu:FindFirstChild("SkillCheckFrame")
+local Marker = SkillCheckFrame:FindFirstChild("Marker")
+local GoldArea = SkillCheckFrame:FindFirstChild("GoldArea")
+SkillCheckFrame.Changed:Connect(function(property)
+    if not getgenv().autoSkillCheck then return end
+    if property ~= "Visible" then return end
+    if not SkillCheckFrame.Visible then return end
+    if not Marker or not GoldArea then return end
+
+    while SkillCheckFrame.Visible do
+        local markerPosition = Marker.AbsolutePosition
+        local goldAreaPosition = GoldArea.AbsolutePosition
+        local goldAreaSize = GoldArea.AbsoluteSize
+
+        if markerPosition.X >= goldAreaPosition.X and markerPosition.X <= (goldAreaPosition.X + goldAreaSize.X) + TOLERANCE then
+            game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+        end
+
+        task.wait(0.1)
+    end
+end)
+-- end feature flag: autoSkillCheck

@@ -52,7 +52,7 @@ local InGamePlayers
 local Player
 local PlayerStats
 local CurrentRoom
-local VirtualInputManager = game:GetService("VirtualInputManager")
+local Elevators
 
 -- global variables
 local TOLERANCE = 5
@@ -247,6 +247,7 @@ repeat
     Lighting = game:GetService("Lighting")
     LocalPlayer = game:GetService("Players").LocalPlayer
     InGamePlayers = game:GetService("Workspace").InGamePlayers
+    Elevators = game:GetService("Workspace").Elevators
     Player = InGamePlayers and InGamePlayers:FindFirstChild(LocalPlayer.Name)
     PlayerStats = Player and Player:FindFirstChild("Stats")
     CurrentRoom = game:GetService("Workspace").CurrentRoom
@@ -255,10 +256,28 @@ until (
     Lighting and
     LocalPlayer and
     InGamePlayers and
+    Elevators and
     Player and
     PlayerStats and
     CurrentRoom
 )
+
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local SingleElevator = Elevators:WaitForChild("Elevator")
+local SpawnZones = SingleElevator:WaitForChild("SpawnZones")
+local Panic = game:GetService("Workspace").Info.Panic
+
+local function DoTeleport(target)
+    if target:IsA("Model") and target.PrimaryPart then
+        local newCFrame = target.PrimaryPart.CFrame + Vector3.new(0, 2.14, 0)
+        Character:SetPrimaryPartCFrame(newCFrame)
+    elseif target:IsA("BasePart") then
+        local newCFrame = target.CFrame + Vector3.new(0, 2.14, 0)
+        Character:SetPrimaryPartCFrame(newCFrame)
+    else
+        warn("target is neither a Model with a PrimaryPart nor a BasePart")
+    end    
+end
 
 -- feature flag: fastRun
 if getgenv().fastRun == true then
@@ -304,6 +323,15 @@ Lighting.Changed:Connect(function()
     end
 end);
 -- end feature flag: loobFb
+
+-- feature flag: loopTpEle and autoTpEle
+local autoTp = Panic.Value == true and getgenv().autoTpEle == true
+local trigger = autoTp or getgenv().loopTpEle == true
+while trigger and SingleElevator and SpawnZones do
+    DoTeleport(SpawnZones)
+    wait(0.01)
+end
+-- end feature flag: loopTpEle and autoTpEle
 
 -- listen to CurrentRoom
 CurrentRoom.ChildAdded:Connect(function(room)

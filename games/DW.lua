@@ -207,15 +207,6 @@ local monsterDropdown = createDropdown(tabs.Main, {
 })
 
 -- feature flag: floatMode
-local floatBrick = Instance.new("Part")
-floatBrick.Name = "FloatingBrick"
-floatBrick.Size = Vector3.new(5, 10, 5)
-floatBrick.Position = Vector3.new(0, 8, 0)
-floatBrick.Anchored = true
-floatBrick.CanCollide = false
-floatBrick.Parent = game:GetService("Workspace")
-floatBrick.Color = Color3.fromRGB(0, 0, 0)
-floatBrick.Transparency = 1
 createToggle(tabs.Main, {
     name = "Float Mode",
     flag = "floatMode",
@@ -223,21 +214,11 @@ createToggle(tabs.Main, {
     callback = function(v)
         getgenv().floatMode = v
         if v then
-            if HumanoidRootPart then
-                floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
-            end
-
-            floatBrick.CanCollide = true
-            floatBrick.Transparency = 0
-
             game:GetService("StarterGui"):SetCore("SendNotification", {
                 Title = "Float Mode is enabled",
                 Text = "Press E to go up, Q to go down",
                 Duration = 6.5
-            })
-        else
-            floatBrick.CanCollide = false
-            floatBrick.Transparency = 1
+            })            
         end
     end
 })
@@ -619,17 +600,39 @@ RunService.Heartbeat:Connect(function()
         end
     end
     -- end feature flag: deleteVeePopup
+
+    -- feature flag: floatMode
+    if HumanoidRootPart then
+        local floatBrick = game:GetService("Workspace"):FindFirstChild("FloatingBrick")
+        if not floatBrick then
+            floatBrick = Instance.new("Part")
+            floatBrick.Name = "FloatingBrick"
+            floatBrick.Size = Vector3.new(5, 10, 5)
+            floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
+            floatBrick.Anchored = true
+            floatBrick.Parent = game:GetService("Workspace")
+            floatBrick.Color = Color3.fromRGB(0, 0, 0)
+            
+            floatBrick.CanCollide = false
+            floatBrick.Transparency = 1
+        end
+
+        if getgenv().floatMode == true then
+            floatBrick.CanCollide = true
+            floatBrick.Transparency = 0
+        else
+            floatBrick.CanCollide = false
+            floatBrick.Transparency = 1
+        end
+    end
+    -- end feature flag: floatMode
 end)
 
 -- feature flag: floatMode
-if getgenv().floatMode == true then
-    floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
-    floatBrick.CanCollide = true
-    floatBrick.Transparency = 0
-end
-
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
+    local floatBrick = game:GetService("Workspace"):FindFirstChild("FloatingBrick")
+    if not floatBrick then return end
 
     if input.KeyCode == Enum.KeyCode.E then
         floatBrick.Position = floatBrick.Position + Vector3.new(0, 1, 0)
@@ -639,6 +642,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 RunService.RenderStepped:Connect(function()
+    local floatBrick = game:GetService("Workspace"):FindFirstChild("FloatingBrick")
+    if not floatBrick then return end
+    if not HumanoidRootPart then return end
+
     floatBrick.Position = Vector3.new(HumanoidRootPart.Position.X, floatBrick.Position.Y, HumanoidRootPart.Position.Z)
 end)
 -- end feature flag: floatMode

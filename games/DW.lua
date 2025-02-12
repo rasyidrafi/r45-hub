@@ -75,6 +75,7 @@ local PlayerStats
 local CurrentRoom
 local Elevators
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 -- global variables
 local TOLERANCE = 5
@@ -148,6 +149,44 @@ createToggle(tabs.Main, {
 })
 -- end feature flag: noClip
 
+-- feature flag: floatMode
+local floatBrick = Instance.new("Part")
+floatBrick.Name = "FloatingBrick"
+floatBrick.Size = Vector3.new(5, 10, 5)
+floatBrick.Position = Vector3.new(0, 8, 0)
+floatBrick.Anchored = true
+floatBrick.CanCollide = false
+floatBrick.Parent = game:GetService("Workspace")
+floatBrick.Color = Color3.fromRGB(0, 0, 0)
+floatBrick.Transparency = 1
+createSection(tabs.Main, "Float Mode")
+createToggle(tabs.Main, {
+    name = "Float Mode",
+    flag = "floatMode",
+    default = false,
+    callback = function(v)
+        getgenv().floatMode = v
+        if v then
+            if HumanoidRootPart then
+                floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
+            end
+
+            floatBrick.CanCollide = true
+            floatBrick.Transparency = 0
+
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Float Mode is enabled",
+                Text = "Press E to go up, Q to go down",
+                Duration = 6.5
+            })
+        else
+            floatBrick.CanCollide = false
+            floatBrick.Transparency = 1
+        end
+    end
+})
+-- end feature flag: floatMode
+
 createSection(tabs.Main, "Character")
 createToggle(tabs.Main, {
     name = "Faster Run",
@@ -160,7 +199,7 @@ createToggle(tabs.Main, {
                 Player.Humanoid.WalkSpeed = 30
             else
                 game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(true)
-                wait(0.1)
+                task.wait(0.1)
                 game:GetService("ReplicatedStorage").Events.SprintEvent:FireServer(false)
             end
         end
@@ -206,6 +245,11 @@ local monsterDropdown = createDropdown(tabs.Main, {
 })
 
 createSection(tabs.Main, "Miscellaneous")
+createToggle(tabs.Main, {
+    name = "Delete Vee Popup",
+    flag = "deleteVeePopup",
+    default = false
+})
 createToggle(tabs.Main, {
     name = "Loop Full Bright",
     flag = "loobFb",
@@ -399,7 +443,6 @@ local espConfig = {
     Generators = {flag = "espGenerator", default = false},
     Player = {flag = "espPlayer", default = false},
     Items = {flag = "espItem", default = false},
-    Elevators = {flag = "espElevator", default = false},
 }
 
 for name, config in pairs(espConfig) do
@@ -445,7 +488,7 @@ repeat
     Player = InGamePlayers and InGamePlayers:FindFirstChild(LocalPlayer.Name)
     PlayerStats = Player and Player:FindFirstChild("Stats")
     CurrentRoom = game:GetService("Workspace").CurrentRoom
-    wait()
+    task.wait()
 until (
     Lighting and
     LocalPlayer and
@@ -567,7 +610,39 @@ RunService.Heartbeat:Connect(function()
         end
     end
     -- end feature flag: autoUseItems
+
+    -- feature flag: deleteVeePopup
+    if getgenv().deleteVeePopup == true then
+        for _, gui in pairs(ScreenGui:GetChildren()) do
+            if gui.Name == "PopUp" and gui.Visible == true then
+                gui.Visible = false
+            end
+        end
+    end
+    -- end feature flag: deleteVeePopup
 end)
+
+-- feature flag: floatMode
+if getgenv().floatMode == true then
+    floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
+    floatBrick.CanCollide = true
+    floatBrick.Transparency = 0
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+
+    if input.KeyCode == Enum.KeyCode.E then
+        floatBrick.Position = floatBrick.Position + Vector3.new(0, 1, 0)
+    elseif input.KeyCode == Enum.KeyCode.Q then
+        floatBrick.Position = floatBrick.Position - Vector3.new(0, 1, 0)
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    floatBrick.Position = Vector3.new(HumanoidRootPart.Position.X, floatBrick.Position.Y, HumanoidRootPart.Position.Z)
+end)
+-- end feature flag: floatMode
 
 -- listen to CurrentRoom
 local ignoreMonsters = { "RazzleDazzleMonster", "ConnieMonster", "RodgerMonster" }
@@ -653,7 +728,7 @@ Player.Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(function()
                         if distance <= RANGE then
                             ProximityPrompt:InputHoldBegin()
                             if ProximityPrompt.HoldDuration > 0 then
-                                wait(ProximityPrompt.HoldDuration)
+                                task.wait(ProximityPrompt.HoldDuration)
                             end
                             ProximityPrompt:InputHoldEnd()
                         end

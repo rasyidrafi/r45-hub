@@ -149,44 +149,6 @@ createToggle(tabs.Main, {
 })
 -- end feature flag: noClip
 
--- feature flag: floatMode
-local floatBrick = Instance.new("Part")
-floatBrick.Name = "FloatingBrick"
-floatBrick.Size = Vector3.new(5, 10, 5)
-floatBrick.Position = Vector3.new(0, 8, 0)
-floatBrick.Anchored = true
-floatBrick.CanCollide = false
-floatBrick.Parent = game:GetService("Workspace")
-floatBrick.Color = Color3.fromRGB(0, 0, 0)
-floatBrick.Transparency = 1
-createSection(tabs.Main, "Float Mode")
-createToggle(tabs.Main, {
-    name = "Float Mode",
-    flag = "floatMode",
-    default = false,
-    callback = function(v)
-        getgenv().floatMode = v
-        if v then
-            if HumanoidRootPart then
-                floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
-            end
-
-            floatBrick.CanCollide = true
-            floatBrick.Transparency = 0
-
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Float Mode is enabled",
-                Text = "Press E to go up, Q to go down",
-                Duration = 6.5
-            })
-        else
-            floatBrick.CanCollide = false
-            floatBrick.Transparency = 1
-        end
-    end
-})
--- end feature flag: floatMode
-
 createSection(tabs.Main, "Character")
 createToggle(tabs.Main, {
     name = "Faster Run",
@@ -243,6 +205,43 @@ local monsterDropdown = createDropdown(tabs.Main, {
         getgenv().selectedMonster = v[1]
     end
 })
+
+-- feature flag: floatMode
+local floatBrick = Instance.new("Part")
+floatBrick.Name = "FloatingBrick"
+floatBrick.Size = Vector3.new(5, 10, 5)
+floatBrick.Position = Vector3.new(0, 8, 0)
+floatBrick.Anchored = true
+floatBrick.CanCollide = false
+floatBrick.Parent = game:GetService("Workspace")
+floatBrick.Color = Color3.fromRGB(0, 0, 0)
+floatBrick.Transparency = 1
+createToggle(tabs.Main, {
+    name = "Float Mode",
+    flag = "floatMode",
+    default = false,
+    callback = function(v)
+        getgenv().floatMode = v
+        if v then
+            if HumanoidRootPart then
+                floatBrick.Position = HumanoidRootPart.Position - Vector3.new(0, 8, 0)
+            end
+
+            floatBrick.CanCollide = true
+            floatBrick.Transparency = 0
+
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Float Mode is enabled",
+                Text = "Press E to go up, Q to go down",
+                Duration = 6.5
+            })
+        else
+            floatBrick.CanCollide = false
+            floatBrick.Transparency = 1
+        end
+    end
+})
+-- end feature flag: floatMode
 
 createSection(tabs.Main, "Miscellaneous")
 createToggle(tabs.Main, {

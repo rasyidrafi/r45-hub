@@ -718,18 +718,20 @@ Player.Humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(function()
     if getgenv().itemsAura == true then
         for _, room in pairs(CurrentRoom:GetChildren()) do
             local Items = room:FindFirstChild("Items")
-            for _, item in pairs(Items:GetChildren()) do
-                local Prompt = item:FindFirstChild("Prompt")
-                if Prompt then
-                    local ProximityPrompt = Prompt:FindFirstChild("ProximityPrompt")
-                    if ProximityPrompt and ProximityPrompt.Enabled then
-                        local distance = (Prompt.Position - HumanoidRootPart.Position).Magnitude
-                        if distance <= RANGE then
-                            ProximityPrompt:InputHoldBegin()
-                            if ProximityPrompt.HoldDuration > 0 then
-                                task.wait(ProximityPrompt.HoldDuration)
+            if Items then
+                for _, item in pairs(Items:GetChildren()) do
+                    local Prompt = item:FindFirstChild("Prompt")
+                    if Prompt then
+                        local ProximityPrompt = Prompt:FindFirstChild("ProximityPrompt")
+                        if ProximityPrompt and ProximityPrompt.Enabled then
+                            local distance = (Prompt.Position - HumanoidRootPart.Position).Magnitude
+                            if distance <= RANGE then
+                                ProximityPrompt:InputHoldBegin()
+                                if ProximityPrompt.HoldDuration > 0 then
+                                    task.wait(ProximityPrompt.HoldDuration)
+                                end
+                                ProximityPrompt:InputHoldEnd()
                             end
-                            ProximityPrompt:InputHoldEnd()
                         end
                     end
                 end

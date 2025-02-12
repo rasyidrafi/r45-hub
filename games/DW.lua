@@ -216,7 +216,7 @@ createToggle(tabs.Main, {
         if v then
             game:GetService("StarterGui"):SetCore("SendNotification", {
                 Title = "Float Mode is enabled",
-                Text = "Press E to go up, Q to go down",
+                Text = "Press R to go up, Q to go down",
                 Duration = 6.5
             })            
         end
@@ -634,7 +634,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     local floatBrick = game:GetService("Workspace"):FindFirstChild("FloatingBrick")
     if not floatBrick then return end
 
-    if input.KeyCode == Enum.KeyCode.E then
+    if input.KeyCode == Enum.KeyCode.R then
         floatBrick.Position = floatBrick.Position + Vector3.new(0, 1, 0)
     elseif input.KeyCode == Enum.KeyCode.Q then
         floatBrick.Position = floatBrick.Position - Vector3.new(0, 1, 0)
